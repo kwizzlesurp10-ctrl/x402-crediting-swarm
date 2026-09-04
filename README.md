@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# x402 Crediting Swarm
 
-## Getting Started
+Three-node swarm (Alpha, Beta, Gamma) that scores **x402 Payment Required** calls so agentic clients can decide GO / NO-GO before they pay a catalog vendor.
 
-First, run the development server:
+Last commit shipped a Next.js console with **real Gemini evaluation and no mocked scores**. The leftover mock — a client-side “Pay Fee” boolean the server trusted — is gone. `POST /api/swarm` is now a real x402 resource: unpaid requests get HTTP **402** with a `PAYMENT-REQUIRED` challenge; paid requests settle through a facilitator, then the three nodes run.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Mission
+
+Protect agentic buyers from fraudulent micropayment requests. Given an x402 payload plus marketplace metadata, the swarm returns:
+
+1. Endpoint identity & reputation verification
+2. Transaction risk assessment
+3. Credit score **0–1000** and a definitive GO / NO-GO
+
+| Score | Trust | Recommendation |
+|-------|-------|----------------|
+| 800–1000 | High | GO — safe to auto-pay |
+| 500–799 | Moderate | NO-GO (Caution) — confirm or escrow |
+| 0–499 | Low / fraud | NO-GO — do not pay |
+
+## HTTP surface
+
+| Path | Auth | What |
+|------|------|------|
+| `GET /` | free | Operator console |
+| `GET /openapi.json` | free | AgentCash OpenAPI 3.1 + `x-payment-info` |
+| `GET /llms.txt` | free | Agent-oriented usage brief |
+| `GET /api/swarm` | free | Resource catalog (price, network, payTo, body schema) |
+| `POST /api/swarm` | **x402 $0.05 USDC** | Run Alpha + Beta + Gamma, return consensus report |
+| `GET /.well-known/x402` | free | x402 catalog (legacy) |
+| `GET /.well-known/funding.json` | free | payTo / network |
+
+Unpaid `POST /api/swarm`:
+
+```
+HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: <base64 x402 v2 JSON>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Retry with a signed `PAYMENT-SIGNATURE` (`@x402/fetch`, CDP `CdpX402Client`, or [x402-mcp](https://github.com/kwizzlesurp10-ctrl/x402-mcp) `x402.pay_and_fetch`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Body:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```json
+{
+  "caller_id": "agent_web_001",
+  "payload": {
+    "endpoint_url": "https://api.example/v1/resource",
+    "vendor_id": "vendor_crypto_993x",
+    "requested_amount_sats": 500,
+    "vendor_history": { "fulfillment_rate": 0.98, "dispute_ratio": 0.01 }
+  }
+}
+```
 
-## Learn More
+## Local
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000). Click **Initiate Swarm Evaluation** — you should see a **402**, not a fake Paid badge. That is success for the unpaid path.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Canonical buyer is [AgentCash](https://agentcash.dev)** — agents pay the 402 with the operator wallet, no API keys:
 
-## Deploy on Vercel
+```bash
+npx agentcash@latest fetch http://localhost:3000/api/swarm \
+  -m POST --payment-network base --payment-protocol x402 \
+  -b '{"caller_id":"agentcash","payload":{"endpoint_url":"https://example/v1"}}'
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Validate discovery:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx -y @agentcash/discovery@latest discover http://localhost:3000
+npx agentcash@latest discover http://localhost:3000
+```
+
+Public listings (after a Railway HTTPS domain is live):
+
+```bash
+npx agentcash@latest register https://YOUR-SERVICE.up.railway.app
+```
+
+[x402scan register](https://www.x402scan.com/resources/register) · [mppscan register](https://www.mppscan.com/register) after adding MPP.
+
+Humans can still **Pay with wallet** (injected EIP-1193) to sign the EIP-3009 USDC authorization.
+
+The swarm itself spends AgentCash USDC on live x402 intel before scoring:
+
+| Source | Call | Price |
+|--------|------|-------|
+| SYNTHORA preflight | `POST https://x402meta.hergertsynthora.com/service` | $0.01 |
+| Market Intel payment risk | `POST …/v1/x402/payment_risk` | $0.01 |
+| Market Intel seller score | `POST …/v1/x402/seller_score` | $0.05 |
+
+If the AgentCash wallet is empty, nodes **must not invent** Bazaar/payTo facts — they flag `insufficient_balance` instead. Fund Base USDC: [deposit](https://agentcash.dev/deposit/0xEd37c3c4b0F05eB326E819EDd6A14fe5DE1cE96D?network=base) or [onboard](https://agentcash.dev/onboard).
+
+Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that supports the configured network.
+
+## Environment
+
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | — | Required for node evaluation after payment |
+| `X402_PAY_TO_ADDRESS` | `0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e` | Same payTo as x402-mcp |
+| `X402_EVAL_PRICE` | `$0.05` | Dollar string; USDC on the network |
+| `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532` |
+| `X402_FACILITATOR_URL` | auto | CDP facilitator when keys are set, else `https://x402.org/facilitator` |
+| `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | — | Ed25519 JWT auth for Coinbase CDP facilitator (same as x402-mcp) |
+
+Set the CDP keys to sell/settle on **Base mainnet**. The public host should never hold a spend key.
+
+## Swarm config
+
+Node roles and the shared system prompt live in [`swarm.yaml`](swarm.yaml). The API route inlines the same prompt so Alpha / Beta / Gamma stay aligned with the YAML.
+
+## Related
+
+- Protocol: [x402](https://x402.org)
+- Seller/buyer MCP already live on Base: [kwizzlesurp10-ctrl/x402-mcp](https://github.com/kwizzlesurp10-ctrl/x402-mcp)

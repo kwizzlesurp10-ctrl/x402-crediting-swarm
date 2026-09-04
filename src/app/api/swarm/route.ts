@@ -1,8 +1,25 @@
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
-import { z } from 'zod';
+import { google } from "@ai-sdk/google";
+import { generateObject } from "ai";
+import { NextRequest, NextResponse } from "next/server";
+import { withX402 } from "@x402/next";
+import { z } from "zod";
+import {
+  EVAL_PRICE,
+  FACILITATOR_KIND,
+  X402_FACILITATOR_URL,
+  X402_NETWORK,
+  X402_PAY_TO,
+  getResourceServer,
+  SWARM_ROUTE_CONFIG,
+  catalogEntry,
+} from "@/lib/x402";
+import {
+  formatIntelForPrompt,
+  gatherAgentcashIntel,
+  type AgentcashIntel,
+} from "@/lib/agentcash-intel";
 
-export const maxDuration = 60; // Set max duration for Vercel
+export const maxDuration = 60;
 
 const swarmSystemPrompt = `You are an x402 Crediting Swarm Node, specialized in assessing the legitimacy and trust score of x402 (Payment Required) calls within catalog marketplaces.
 
@@ -33,38 +50,99 @@ const ReportSchema = z.object({
   score: z.number().min(0).max(1000),
   recommendation: z.string(),
   flags: z.array(z.string()),
-  trust_level: z.string()
+  trust_level: z.string(),
 });
 
-async function runNode(nodeName: string, payload: any) {
-  try {
-    const { object } = await generateObject({
-      model: google('gemini-1.5-flash'),
-      system: `${swarmSystemPrompt}\n\nYou are acting as: ${nodeName}`,
-      prompt: `Please evaluate this x402 payload:\n\n${JSON.stringify(payload, null, 2)}`,
-      schema: ReportSchema,
-    });
-    return { node: nodeName, ...object };
-  } catch (error) {
-    console.error(`Error in ${nodeName}:`, error);
-    throw error;
-  }
+type NodeReport = z.infer<typeof ReportSchema> & { node: string };
+
+async function runNode(
+  nodeName: string,
+  payload: unknown,
+  intel: AgentcashIntel,
+): Promise<NodeReport> {
+  const { object } = await generateObject({
+    model: google("gemini-1.5-flash"),
+    system: `${swarmSystemPrompt}\n\nYou are acting as: ${nodeName}
+
+Live intel was purchased (or attempted) via AgentCash x402 APIs. Treat that intel as ground truth for Bazaar listing, live 402 payTo, and seller volume. Never fabricate catalog registration or payTo_match results that the intel does not contain.`,
+    prompt: `Evaluate this x402 payload:
+
+${JSON.stringify(payload, null, 2)}
+
+AgentCash live intel:
+${formatIntelForPrompt(intel)}`,
+    schema: ReportSchema,
+  });
+  return { node: nodeName, ...object };
 }
 
-export async function POST(req: Request) {
-  try {
-    const { caller_id, payload, fee_paid } = await req.json();
+function corsJson(data: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, PAYMENT-RESPONSE");
+  return NextResponse.json(data, { ...init, headers });
+}
 
-    if (!fee_paid) {
-      return new Response(JSON.stringify({
-        status: "error",
-        message: "Fee Collection Gate Failed: Valid micropayment required."
-      }), { status: 402, headers: { 'Content-Type': 'application/json' } });
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Content-Type, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-PAYMENT",
+      "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+    },
+  });
+}
+
+export async function GET(req: NextRequest) {
+  const resourceUrl = new URL("/api/swarm", req.url).toString();
+  return corsJson({
+    name: "x402 Crediting Swarm",
+    method: "POST",
+    price: EVAL_PRICE,
+    network: X402_NETWORK,
+    payTo: X402_PAY_TO,
+    facilitator: FACILITATOR_KIND,
+    facilitator_url: X402_FACILITATOR_URL,
+    catalog: catalogEntry(resourceUrl),
+    body: {
+      caller_id: "string (optional)",
+      payload: "object — x402 Payment Required payload + vendor metadata",
+    },
+  });
+}
+
+async function evaluate(req: NextRequest): Promise<NextResponse> {
+  try {
+    const body = (await req.json().catch(() => ({}))) as {
+      payload?: unknown;
+      caller_id?: string;
+    };
+    const payload = body?.payload;
+    const callerId = body?.caller_id ?? "anonymous";
+
+    if (!payload || typeof payload !== "object") {
+      return corsJson(
+        {
+          error:
+            "JSON body must include a `payload` object (the x402 call + vendor metadata to score).",
+        },
+        { status: 400 },
+      );
     }
 
-    // Concurrent invocation of the 3 nodes
+    const intel = await gatherAgentcashIntel(payload as {
+      endpoint_url?: unknown;
+      payTo?: unknown;
+      pay_to?: unknown;
+    });
+
     const nodes = ["x402_node_alpha", "x402_node_beta", "x402_node_gamma"];
-    const results = await Promise.all(nodes.map(node => runNode(node, payload)));
+    const results = await Promise.all(
+      nodes.map((node) => runNode(node, payload, intel)),
+    );
 
     const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
     const averageScore = Math.floor(totalScore / results.length);
@@ -80,20 +158,27 @@ export async function POST(req: Request) {
       trustLevel = "Moderate Trust (User confirmation recommended)";
     }
 
-    const allFlags = Array.from(new Set(results.flatMap(r => r.flags)));
+    const allFlags = Array.from(new Set(results.flatMap((r) => r.flags)));
 
-    const report = {
+    return corsJson({
       status: "success",
+      caller_id: callerId,
       final_creditability_score: averageScore,
       final_recommendation: finalRecommendation,
       trust_level: trustLevel,
       aggregated_flags: allFlags,
-      node_reports: results
-    };
-
-    return new Response(JSON.stringify(report), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  } catch (err: any) {
+      node_reports: results,
+      agentcash_intel: intel,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
     console.error(err);
-    return new Response(JSON.stringify({ error: err.message || "Internal server error" }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return corsJson({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withX402(
+  evaluate,
+  SWARM_ROUTE_CONFIG,
+  getResourceServer(),
+);

@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.agents
+.claude
+skills-lock.json
+*.md
+!README.md
+.env*
+!.env.example

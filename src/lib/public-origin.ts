@@ -41,18 +41,25 @@ function originFromHost(host: string | null, proto: string): string | null {
   return `${scheme}://${host}`;
 }
 
+function asHttpsOrigin(value: string): string {
+  const stripped = stripSlash(value);
+  if (/^https?:\/\//i.test(stripped)) return stripped;
+  if (isPrivateHost(stripped)) return stripped;
+  return `https://${stripped}`;
+}
+
 /** Explicit deploy origin, or Railway's public domain. */
 export function configuredPublicOrigin(): string | null {
   const explicit =
     process.env.PUBLIC_ORIGIN?.trim() || process.env.BASE_URL?.trim();
-  if (explicit) return stripSlash(explicit);
+  if (explicit) return asHttpsOrigin(explicit);
 
   const railwayStatic = process.env.RAILWAY_STATIC_URL?.trim();
-  if (railwayStatic) return stripSlash(railwayStatic);
+  if (railwayStatic) return asHttpsOrigin(railwayStatic);
 
   const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
   if (railwayDomain && !isPrivateHost(railwayDomain)) {
-    return `https://${stripSlash(railwayDomain)}`;
+    return asHttpsOrigin(railwayDomain);
   }
 
   return null;

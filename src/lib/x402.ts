@@ -23,11 +23,24 @@ export const X402_NETWORK = (process.env.X402_NETWORK ??
 export const X402_PAY_TO =
   process.env.X402_PAY_TO_ADDRESS ?? DEFAULT_PAY_TO;
 
-export const FACILITATOR_KIND: "cdp" | "x402.org" = CDP ? "cdp" : "x402.org";
+/** PayAI public facilitator — Base mainnet without CDP keys. */
+export const PAYAI_FACILITATOR_URL = "https://facilitator.payai.network";
+
+const MAINNET = X402_NETWORK === "eip155:8453";
+
+export const FACILITATOR_KIND: "cdp" | "payai" | "x402.org" = CDP
+  ? "cdp"
+  : MAINNET
+    ? "payai"
+    : "x402.org";
 
 export const X402_FACILITATOR_URL =
   process.env.X402_FACILITATOR_URL ??
-  (CDP ? CDP_FACILITATOR_URL : "https://x402.org/facilitator");
+  (CDP
+    ? CDP_FACILITATOR_URL
+    : MAINNET
+      ? PAYAI_FACILITATOR_URL
+      : "https://x402.org/facilitator");
 
 export const SWARM_ROUTE_CONFIG: RouteConfig = {
   accepts: {

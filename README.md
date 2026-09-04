@@ -107,8 +107,8 @@ Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that
 | `GOOGLE_GENERATIVE_AI_API_KEY` | — | Required for node evaluation after payment |
 | `X402_PAY_TO_ADDRESS` | `0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e` | Same payTo as x402-mcp |
 | `X402_EVAL_PRICE` | `$0.05` | Dollar string; USDC on the network |
-| `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532` |
-| `X402_FACILITATOR_URL` | auto | CDP facilitator when keys are set, else `https://x402.org/facilitator` |
+| `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532`. Public listings need mainnet. |
+| `X402_FACILITATOR_URL` | auto | CDP when keys are set; PayAI (`https://facilitator.payai.network`) on mainnet without CDP; else `https://x402.org/facilitator` |
 | `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | — | Ed25519 JWT auth for Coinbase CDP facilitator (same as x402-mcp) |
 | `BASE_URL` / `PUBLIC_ORIGIN` | Railway public URL | Canonical HTTPS origin for OpenAPI `servers` and 402 `resource.url` |
 

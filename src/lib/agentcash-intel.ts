@@ -183,7 +183,7 @@ export function formatIntelForPrompt(intel: AgentcashIntel): string {
     (c) => c.error === "insufficient_balance" || /insufficient/i.test(c.error ?? ""),
   );
   if (unfunded) {
-    return `AgentCash operator wallet is unfunded (0 USDC). Do NOT invent CDP Bazaar listings, live payTo matches, or seller volume. Flag that live intel was skipped: insufficient_balance. Deposit: https://agentcash.dev/deposit/0xEd37c3c4b0F05eB326E819EDd6A14fe5DE1cE96D?network=base`;
+    return `AgentCash operator wallet is unfunded (0 USDC). Do NOT invent CDP Bazaar listings, live payTo matches, or seller volume. Flag that live intel was skipped: insufficient_balance. Deposit: https://agentcash.dev/deposit/0xc22c17Fca624dB679B2471f2Bb099E1E29a46209?network=base`;
   }
   return JSON.stringify(intel.calls, null, 2);
 }

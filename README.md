@@ -96,7 +96,7 @@ The swarm itself spends AgentCash USDC on live x402 intel before scoring:
 | Market Intel payment risk | `POST …/v1/x402/payment_risk` | $0.01 |
 | Market Intel seller score | `POST …/v1/x402/seller_score` | $0.05 |
 
-If the AgentCash wallet is empty, nodes **must not invent** Bazaar/payTo facts — they flag `insufficient_balance` instead. Fund Base USDC: [deposit](https://agentcash.dev/deposit/0xEd37c3c4b0F05eB326E819EDd6A14fe5DE1cE96D?network=base) or [onboard](https://agentcash.dev/onboard).
+If the AgentCash wallet is empty, nodes **must not invent** Bazaar/payTo facts — they flag `insufficient_balance` instead. Operator buyer is the x402-mcp hot wallet [`0xc22c17Fca624dB679B2471f2Bb099E1E29a46209`](https://agentcash.dev/deposit/0xc22c17Fca624dB679B2471f2Bb099E1E29a46209?network=base). That spend key stays local; the Railway seller only has `X402_PAY_TO_ADDRESS`.
 
 Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that supports the configured network.
 

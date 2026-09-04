@@ -110,6 +110,7 @@ Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that
 | `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532` |
 | `X402_FACILITATOR_URL` | auto | CDP facilitator when keys are set, else `https://x402.org/facilitator` |
 | `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` | — | Ed25519 JWT auth for Coinbase CDP facilitator (same as x402-mcp) |
+| `BASE_URL` / `PUBLIC_ORIGIN` | Railway public URL | Canonical HTTPS origin for OpenAPI `servers` and 402 `resource.url` |
 
 Set the CDP keys to sell/settle on **Base mainnet**. The public host should never hold a spend key.
 

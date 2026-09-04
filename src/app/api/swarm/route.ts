@@ -14,6 +14,10 @@ import {
   catalogEntry,
 } from "@/lib/x402";
 import {
+  publicOrigin,
+  rewriteRequestToPublicOrigin,
+} from "@/lib/public-origin";
+import {
   formatIntelForPrompt,
   gatherAgentcashIntel,
   type AgentcashIntel,
@@ -97,7 +101,7 @@ export async function OPTIONS() {
 }
 
 export async function GET(req: NextRequest) {
-  const resourceUrl = new URL("/api/swarm", req.url).toString();
+  const resourceUrl = `${publicOrigin(req)}/api/swarm`;
   return corsJson({
     name: "x402 Crediting Swarm",
     method: "POST",
@@ -177,8 +181,12 @@ async function evaluate(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-export const POST = withX402(
+const paidPost = withX402(
   evaluate,
   SWARM_ROUTE_CONFIG,
   getResourceServer(),
 );
+
+export async function POST(req: NextRequest) {
+  return paidPost(rewriteRequestToPublicOrigin(req));
+}

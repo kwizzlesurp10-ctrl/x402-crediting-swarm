@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       { source: "/api/swarm", headers: cors },
       { source: "/openapi.json", headers: cors },
       { source: "/llms.txt", headers: cors },
+      { source: "/.well-known/x402", headers: cors },
+      { source: "/.well-known/funding.json", headers: cors },
     ];
   },
 };

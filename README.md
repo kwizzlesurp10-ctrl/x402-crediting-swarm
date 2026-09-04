@@ -105,6 +105,7 @@ Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that
 | Variable | Default | Notes |
 |----------|---------|-------|
 | `GOOGLE_GENERATIVE_AI_API_KEY` | — | Required for node evaluation after payment |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Google model id (`gemini-1.5-flash` is retired) |
 | `X402_PAY_TO_ADDRESS` | `0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e` | Same payTo as x402-mcp |
 | `X402_EVAL_PRICE` | `$0.05` | Dollar string; USDC on the network |
 | `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532`. Public listings need mainnet. |

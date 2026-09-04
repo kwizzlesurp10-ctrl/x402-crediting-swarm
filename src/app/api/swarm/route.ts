@@ -65,7 +65,7 @@ async function runNode(
   intel: AgentcashIntel,
 ): Promise<NodeReport> {
   const { object } = await generateObject({
-    model: google("gemini-1.5-flash"),
+    model: google(process.env.GEMINI_MODEL ?? "gemini-2.5-flash"),
     system: `${swarmSystemPrompt}\n\nYou are acting as: ${nodeName}
 
 Live intel was purchased (or attempted) via AgentCash x402 APIs. Treat that intel as ground truth for Bazaar listing, live 402 payTo, and seller volume. Never fabricate catalog registration or payTo_match results that the intel does not contain.`,

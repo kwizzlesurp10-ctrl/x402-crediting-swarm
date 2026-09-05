@@ -98,14 +98,14 @@ The swarm itself spends AgentCash USDC on live x402 intel before scoring:
 
 If the AgentCash wallet is empty, nodes **must not invent** Bazaar/payTo facts — they flag `insufficient_balance` instead. Operator buyer is the x402-mcp hot wallet [`0xc22c17Fca624dB679B2471f2Bb099E1E29a46209`](https://agentcash.dev/deposit/0xc22c17Fca624dB679B2471f2Bb099E1E29a46209?network=base). That spend key stays local; the Railway seller only has `X402_PAY_TO_ADDRESS`.
 
-Gemini needs `GOOGLE_GENERATIVE_AI_API_KEY`. Settlement needs a facilitator that supports the configured network.
+Node evaluation goes through **Vercel AI Gateway** (`AI_GATEWAY_API_KEY`). Settlement needs a facilitator that supports the configured network.
 
 ## Environment
 
 | Variable | Default | Notes |
 |----------|---------|-------|
-| `GOOGLE_GENERATIVE_AI_API_KEY` | — | Required for node evaluation after payment |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Google model id (`gemini-1.5-flash` is retired) |
+| `AI_GATEWAY_API_KEY` | — | Vercel AI Gateway key for Alpha/Beta/Gamma (`provider/model` strings) |
+| `SWARM_MODEL` | `google/gemini-3.8-flash` | AI Gateway model id |
 | `X402_PAY_TO_ADDRESS` | `0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e` | Same payTo as x402-mcp |
 | `X402_EVAL_PRICE` | `$0.05` | Dollar string; USDC on the network |
 | `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532`. Public listings need mainnet. |

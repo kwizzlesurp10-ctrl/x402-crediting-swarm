@@ -1,5 +1,4 @@
-import { google } from "@ai-sdk/google";
-import { generateObject } from "ai";
+import { generateText, gateway, Output } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import { withX402 } from "@x402/next";
 import { z } from "zod";
@@ -59,13 +58,16 @@ const ReportSchema = z.object({
 
 type NodeReport = z.infer<typeof ReportSchema> & { node: string };
 
+const SWARM_MODEL =
+  process.env.SWARM_MODEL ?? "google/gemini-3.8-flash";
+
 async function runNode(
   nodeName: string,
   payload: unknown,
   intel: AgentcashIntel,
 ): Promise<NodeReport> {
-  const { object } = await generateObject({
-    model: google(process.env.GEMINI_MODEL ?? "gemini-2.5-flash"),
+  const { output } = await generateText({
+    model: gateway(SWARM_MODEL),
     system: `${swarmSystemPrompt}\n\nYou are acting as: ${nodeName}
 
 Live intel was purchased (or attempted) via AgentCash x402 APIs. Treat that intel as ground truth for Bazaar listing, live 402 payTo, and seller volume. Never fabricate catalog registration or payTo_match results that the intel does not contain.`,
@@ -75,9 +77,21 @@ ${JSON.stringify(payload, null, 2)}
 
 AgentCash live intel:
 ${formatIntelForPrompt(intel)}`,
-    schema: ReportSchema,
+    output: Output.object({ schema: ReportSchema }),
+    providerOptions: {
+      gateway: {
+        models: [
+          "google/gemini-3.5-flash-lite",
+          "google/gemini-2.5-flash",
+        ],
+        tags: ["x402-crediting-swarm", nodeName],
+      },
+    },
   });
-  return { node: nodeName, ...object };
+  if (!output) {
+    throw new Error(`${nodeName} returned empty structured output`);
+  }
+  return { node: nodeName, ...output };
 }
 
 function corsJson(data: unknown, init?: ResponseInit) {

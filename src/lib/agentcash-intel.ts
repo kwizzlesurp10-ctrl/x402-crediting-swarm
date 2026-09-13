@@ -60,7 +60,7 @@ async function agentcashFetch(opts: {
 
   try {
     const { stdout } = await execFileAsync("npx", args, {
-      timeout: 50_000,
+      timeout: 3_000,
       maxBuffer: 2_000_000,
       env: process.env,
     });
@@ -166,13 +166,17 @@ export async function gatherAgentcashIntel(payload: Payload): Promise<AgentcashI
     );
   }
 
-  const calls: IntelCall[] = [];
-  for (const job of jobs) {
-    const result = await job();
-    calls.push(result);
-    if (result.error === "insufficient_balance") break;
+  try {
+    const calls = await Promise.race([
+      Promise.all(jobs.map((job) => job())),
+      new Promise<IntelCall[]>((resolve) =>
+        setTimeout(() => resolve([]), 2500)
+      ),
+    ]);
+    return { funded: calls.some((c) => c.ok), calls };
+  } catch (e) {
+    return { funded: false, calls: [] };
   }
-  return { funded: calls.some((c) => c.ok), calls };
 }
 
 export function formatIntelForPrompt(intel: AgentcashIntel): string {

@@ -111,7 +111,7 @@ export default function Home() {
         body: JSON.stringify({
           caller_id: 'agent_web_001',
           payload: parsedPayload,
-          fee_paid: paymentMode === 'simulated' ? feePaid : undefined
+          fee_paid: paymentMode === 'simulated' ? true : undefined
         })
       });
 

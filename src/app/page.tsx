@@ -115,13 +115,26 @@ export default function Home() {
         })
       });
 
-      const data = await res.json();
-
       if (res.status === 402) {
-        setRaw402Response(data);
+        let parsedPr: any = null;
+        const prHeader = res.headers.get('payment-required');
+        const wwwAuth = res.headers.get('www-authenticate');
+        const encoded = prHeader || (wwwAuth?.startsWith('x402 ') ? wwwAuth.slice(5) : null);
+
+        if (encoded) {
+          try {
+            parsedPr = JSON.parse(atob(encoded));
+          } catch (e) {
+            console.error("Failed to decode payment-required header", e);
+          }
+        }
+
+        setRaw402Response(parsedPr || { x402Version: 2, error: "Payment required" });
         setError("HTTP 402 Payment Required: Micropayment header or fee payment required.");
         return;
       }
+
+      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.error || data.message || "Failed to evaluate");
@@ -352,10 +365,10 @@ export default function Home() {
                     <div className="font-semibold">{error}</div>
                     {raw402Response && (
                       <div className="mt-2 space-y-1 font-mono text-[11px] bg-neutral-950 p-2 rounded border border-rose-900/40 text-neutral-300">
-                        <div><strong>x402Version:</strong> {raw402Response.x402Version}</div>
-                        <div><strong>PayTo:</strong> {raw402Response.accepts?.[0]?.payTo || raw402Response.payTo}</div>
-                        <div><strong>Price:</strong> {raw402Response.accepts?.[0]?.price || raw402Response.price}</div>
-                        <div><strong>Network:</strong> {raw402Response.accepts?.[0]?.network || raw402Response.network}</div>
+                        <div><strong>x402Version:</strong> {raw402Response.x402Version || 2}</div>
+                        <div><strong>PayTo:</strong> {raw402Response.accepts?.[0]?.payTo || raw402Response.payTo || "0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e"}</div>
+                        <div><strong>Price:</strong> {raw402Response.accepts?.[0]?.price || (raw402Response.accepts?.[0]?.amount ? `$${(Number(raw402Response.accepts[0].amount) / 1000000).toFixed(2)} USD (${raw402Response.accepts[0].amount} micro-USDC)` : "$0.05")}</div>
+                        <div><strong>Network:</strong> {raw402Response.accepts?.[0]?.network || raw402Response.network || "eip155:84532"}</div>
                       </div>
                     )}
                   </div>

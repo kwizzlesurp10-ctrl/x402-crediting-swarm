@@ -23,6 +23,7 @@ import {
 } from "@/lib/agentcash-intel";
 import { sendAgentMail } from "@/lib/agentmail";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const swarmSystemPrompt = `You are an x402 Crediting Swarm Node, specialized in assessing the legitimacy and trust score of x402 (Payment Required) calls within catalog marketplaces.

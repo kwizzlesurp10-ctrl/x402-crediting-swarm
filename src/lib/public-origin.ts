@@ -54,6 +54,9 @@ export function configuredPublicOrigin(): string | null {
     process.env.PUBLIC_ORIGIN?.trim() || process.env.BASE_URL?.trim();
   if (explicit) return asHttpsOrigin(explicit);
 
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return asHttpsOrigin(vercelUrl);
+
   const railwayStatic = process.env.RAILWAY_STATIC_URL?.trim();
   if (railwayStatic) return asHttpsOrigin(railwayStatic);
 

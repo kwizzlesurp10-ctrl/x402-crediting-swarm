@@ -1,6 +1,8 @@
 import { sendAgentMail, getAgentMailInbox, getAgentMailThreads, getAgentMailThread } from '@/lib/agentmail';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = "force-dynamic";
+
 function corsJson(data: unknown, status = 200) {
   return NextResponse.json(data, {
     status,

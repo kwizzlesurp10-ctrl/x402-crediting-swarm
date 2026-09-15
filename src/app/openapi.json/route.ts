@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildOpenApiDocument } from "@/lib/openapi";
 import { publicOrigin } from "@/lib/public-origin";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const origin = publicOrigin(req);
   return NextResponse.json(buildOpenApiDocument(origin), {

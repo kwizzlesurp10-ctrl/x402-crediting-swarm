@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const isContainer = Boolean(process.env.RENDER || process.env.RAILWAY_STATIC_URL || process.env.DOCKER);
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(isContainer ? { output: "standalone" } : {}),
   turbopack: {
     root: path.resolve(__dirname),
   },

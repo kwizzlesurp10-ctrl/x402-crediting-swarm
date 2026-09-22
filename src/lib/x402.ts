@@ -8,6 +8,7 @@ import {
   buildCdpCreateAuthHeaders,
   hasCdpCredentials,
 } from "@/lib/cdp-auth";
+import { resolveDefaultX402Network } from "@/lib/x402-env";
 
 /** Same payTo used by x402-mcp on Base. Override with X402_PAY_TO_ADDRESS. */
 export const DEFAULT_PAY_TO =
@@ -17,8 +18,12 @@ export const EVAL_PRICE = process.env.X402_EVAL_PRICE ?? "$0.05";
 
 const CDP = hasCdpCredentials();
 
-export const X402_NETWORK = (process.env.X402_NETWORK ??
-  (CDP ? "eip155:8453" : "eip155:84532")) as `${string}:${string}`;
+export const X402_NETWORK = resolveDefaultX402Network({
+  x402Network: process.env.X402_NETWORK,
+  hasCdpCredentials: CDP,
+  vercelEnv: process.env.VERCEL_ENV,
+  nodeEnv: process.env.NODE_ENV,
+});
 
 export const X402_PAY_TO =
   process.env.X402_PAY_TO_ADDRESS ?? DEFAULT_PAY_TO;

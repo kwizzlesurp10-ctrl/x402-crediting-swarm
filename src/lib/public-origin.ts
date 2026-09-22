@@ -1,33 +1,11 @@
 import { NextRequest } from "next/server";
-
-const PRIVATE_HOSTS = new Set([
-  "0.0.0.0",
-  "127.0.0.1",
-  "localhost",
-  "::",
-  "::1",
-]);
-
-function stripSlash(value: string): string {
-  return value.replace(/\/+$/, "");
-}
-
-function hostnameOf(host: string): string {
-  const trimmed = host.trim().toLowerCase();
-  if (trimmed.startsWith("[")) {
-    const end = trimmed.indexOf("]");
-    return end === -1 ? trimmed : trimmed.slice(1, end);
-  }
-  return trimmed.split(":")[0] ?? trimmed;
-}
-
-function isPrivateHost(host: string): boolean {
-  const hostname = hostnameOf(host);
-  if (PRIVATE_HOSTS.has(hostname)) return true;
-  if (hostname.endsWith(".railway.internal")) return true;
-  if (hostname.endsWith(".local")) return true;
-  return false;
-}
+import {
+  hostnameOf,
+  isPrivateHost,
+  isVercelPreviewDeploymentHost,
+  originHostIsPublicStable,
+  resolveConfiguredPublicOrigin,
+} from "@/lib/public-origin-env";
 
 function firstHeader(value: string | null): string | null {
   if (!value) return null;
@@ -41,41 +19,23 @@ function originFromHost(host: string | null, proto: string): string | null {
   return `${scheme}://${host}`;
 }
 
-function asHttpsOrigin(value: string): string {
-  const stripped = stripSlash(value);
-  if (/^https?:\/\//i.test(stripped)) return stripped;
-  if (isPrivateHost(stripped)) return stripped;
-  return `https://${stripped}`;
+function readPublicOriginEnv() {
+  return {
+    publicOrigin: process.env.PUBLIC_ORIGIN,
+    baseUrl: process.env.BASE_URL,
+    vercelProjectProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    vercelUrl: process.env.VERCEL_URL,
+    railwayStaticUrl: process.env.RAILWAY_STATIC_URL,
+    railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN,
+  };
 }
 
-/** Explicit deploy origin, or Railway's public domain. */
+/** Explicit deploy origin, or Railway / Vercel production alias. */
 export function configuredPublicOrigin(): string | null {
-  const explicit =
-    process.env.PUBLIC_ORIGIN?.trim() || process.env.BASE_URL?.trim();
-  if (explicit) return asHttpsOrigin(explicit);
-
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  if (vercelUrl) return asHttpsOrigin(vercelUrl);
-
-  const railwayStatic = process.env.RAILWAY_STATIC_URL?.trim();
-  if (railwayStatic) return asHttpsOrigin(railwayStatic);
-
-  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
-  if (railwayDomain && !isPrivateHost(railwayDomain)) {
-    return asHttpsOrigin(railwayDomain);
-  }
-
-  return null;
+  return resolveConfiguredPublicOrigin(readPublicOriginEnv());
 }
 
-/**
- * Origin agents should see in OpenAPI `servers` and x402 `resource.url`.
- * Next standalone on Railway builds `req.url` from HOSTNAME=0.0.0.0 + PORT.
- */
-export function publicOrigin(req: NextRequest): string {
-  const configured = configuredPublicOrigin();
-  if (configured) return configured;
-
+function requestPublicOrigin(req: NextRequest): string | null {
   const proto =
     firstHeader(req.headers.get("x-forwarded-proto")) ||
     new URL(req.url).protocol.replace(":", "") ||
@@ -93,6 +53,33 @@ export function publicOrigin(req: NextRequest): string {
   const fallback = new URL(req.url).origin;
   if (!isPrivateHost(new URL(fallback).host)) return fallback;
   return fallback;
+}
+
+/**
+ * Origin agents should see in OpenAPI `servers` and x402 `resource.url`.
+ * Next standalone on Railway builds `req.url` from HOSTNAME=0.0.0.0 + PORT.
+ */
+export function publicOrigin(req: NextRequest): string {
+  const configured = configuredPublicOrigin();
+  const fromRequest = requestPublicOrigin(req);
+
+  if (configured) {
+    const configuredHost = hostnameOf(new URL(configured).host);
+    const leaksPreview =
+      isVercelPreviewDeploymentHost(configuredHost) ||
+      !originHostIsPublicStable(configured);
+
+    if (leaksPreview && fromRequest && originHostIsPublicStable(fromRequest)) {
+      return fromRequest;
+    }
+    return configured;
+  }
+
+  if (fromRequest && originHostIsPublicStable(fromRequest)) {
+    return fromRequest;
+  }
+
+  return fromRequest ?? "https://localhost";
 }
 
 /** Clone the request so @x402/next advertises the public resource URL. */

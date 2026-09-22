@@ -12,7 +12,7 @@ import { resolveDefaultX402Network } from "@/lib/x402-env";
 
 /** Same payTo used by x402-mcp on Base. Override with X402_PAY_TO_ADDRESS. */
 export const DEFAULT_PAY_TO =
-  "0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e" as const;
+  "0x05e1720bB82F86B5bc7940a99FDC702E32256357" as const;
 
 export const EVAL_PRICE = process.env.X402_EVAL_PRICE ?? "$0.05";
 

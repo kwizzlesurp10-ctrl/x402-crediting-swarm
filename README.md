@@ -106,7 +106,7 @@ Node evaluation goes through **Vercel AI Gateway** (`AI_GATEWAY_API_KEY`). Settl
 |----------|---------|-------|
 | `AI_GATEWAY_API_KEY` | — | Vercel AI Gateway key for Alpha/Beta/Gamma (`provider/model` strings) |
 | `SWARM_MODEL` | `google/gemini-3.8-flash` | AI Gateway model id |
-| `X402_PAY_TO_ADDRESS` | `0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e` | Same payTo as x402-mcp |
+| `X402_PAY_TO_ADDRESS` | `0x05e1720bB82F86B5bc7940a99FDC702E32256357` | Same payTo as x402-mcp |
 | `X402_EVAL_PRICE` | `$0.05` | Dollar string; USDC on the network |
 | `X402_NETWORK` | auto | `eip155:8453` when CDP keys are set, else Base Sepolia `eip155:84532`. Public listings need mainnet. |
 | `X402_FACILITATOR_URL` | auto | CDP when keys are set; PayAI (`https://facilitator.payai.network`) on mainnet without CDP; else `https://x402.org/facilitator` |

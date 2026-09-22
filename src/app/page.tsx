@@ -445,7 +445,7 @@ export default function Home() {
                     {raw402Response && (
                       <div className="space-y-1 font-mono text-[11px] bg-slate-950/90 p-3 rounded-xl border border-rose-900/50 text-slate-300">
                         <div><strong>x402Version:</strong> {raw402Response.x402Version || 2}</div>
-                        <div><strong>PayTo:</strong> {raw402Response.accepts?.[0]?.payTo || raw402Response.payTo || "0x8A897D546c22d726b45Fa25F0EBB56207E63fF4e"}</div>
+                        <div><strong>PayTo:</strong> {raw402Response.accepts?.[0]?.payTo || raw402Response.payTo || "0x05e1720bB82F86B5bc7940a99FDC702E32256357"}</div>
                         <div><strong>Price:</strong> {raw402Response.accepts?.[0]?.price || (raw402Response.accepts?.[0]?.amount ? `$${(Number(raw402Response.accepts[0].amount) / 1000000).toFixed(2)} USD (${raw402Response.accepts[0].amount} micro-USDC)` : "$0.05")}</div>
                         <div><strong>Network:</strong> {raw402Response.accepts?.[0]?.network || raw402Response.network || "eip155:84532"}</div>
                       </div>
@@ -761,7 +761,7 @@ export default function Home() {
                 </div>
                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-slate-500 text-[11px]">PayTo Receiver Address</div>
-                  <div className="text-emerald-400 font-bold truncate">0x8A897D546c22d726b45Fa...</div>
+                  <div className="text-emerald-400 font-bold truncate">0x05e1720bB82F86B5bc794...</div>
                 </div>
                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
                   <div className="text-slate-500 text-[11px]">Price / Token Asset</div>

@@ -41,13 +41,28 @@ function isObj(v: unknown): v is Record<string, unknown> {
 
 function hasAbsoluteUrl(resource: unknown): boolean {
   if (!isObj(resource) || typeof resource.url !== "string") return false;
-  return /^https?:\/\//i.test(resource.url);
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(resource.url);
+}
+
+const ABSOLUTE = /^https?:\/\//i;
+
+/** Same resource = same origin + path (query/fragment ignored). */
+export function sameResource(a: string, b: string): boolean {
+  try {
+    const x = new URL(a);
+    const y = new URL(b);
+    return x.protocol === y.protocol && x.host === y.host && x.pathname.replace(/\/+$/, "") === y.pathname.replace(/\/+$/, "");
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Mutates `payload` in place: sets `resource` when the buyer left it out (or
  * sent it without an absolute URL) and `extensions.bazaar` when missing.
- * Buyer-supplied values are never replaced.
+ * Buyer-supplied values are never replaced, and our bazaar declaration is only
+ * attached when the payload's resource is this route's own advertised URL, so
+ * a buyer cannot get our discovery metadata cataloged under a foreign URL.
  */
 export function backfillDiscovery(
   payload: PayloadLike,
@@ -55,7 +70,8 @@ export function backfillDiscovery(
 ): BackfillResult {
   const out: BackfillResult = { resource: false, bazaar: false };
   const res = advertised.resource;
-  if (res && /^https?:\/\//i.test(res.url) && !hasAbsoluteUrl(payload.resource)) {
+  if (!res || !ABSOLUTE.test(res.url)) return out;
+  if (!hasAbsoluteUrl(payload.resource)) {
     const clean: ResourceInfoLike = { url: res.url };
     if (res.description) clean.description = res.description;
     if (res.mimeType) clean.mimeType = res.mimeType;
@@ -64,6 +80,8 @@ export function backfillDiscovery(
     payload.resource = clean;
     out.resource = true;
   }
+  const payloadUrl = (payload.resource as { url: string }).url;
+  if (!sameResource(payloadUrl, res.url)) return out;
   const exts = isObj(payload.extensions) ? payload.extensions : {};
   if (advertised.bazaar !== undefined && advertised.bazaar !== null && !isObj(exts[BAZAAR_KEY])) {
     payload.extensions = { ...exts, [BAZAAR_KEY]: structuredClone(advertised.bazaar) };

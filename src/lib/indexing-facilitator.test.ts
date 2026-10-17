@@ -81,6 +81,18 @@ describe("backfillDiscovery", () => {
     assert.ok(p.extensions.bazaar);
   });
 
+  it("never attaches our bazaar declaration to a foreign buyer resource url", () => {
+    const p = buyerPayload({ resource: { url: "https://attacker.example/x" } });
+    const r = backfillDiscovery(p, { resource, bazaar });
+    assert.deepEqual(r, { resource: false, bazaar: false });
+    assert.equal(p.extensions, undefined);
+  });
+
+  it("attaches bazaar when the buyer echoed our own resource url (query ignored)", () => {
+    const p = buyerPayload({ resource: { url: `${URL_}?a=1` } });
+    assert.deepEqual(backfillDiscovery(p, { resource, bazaar }), { resource: false, bazaar: true });
+  });
+
   it("does not invent a relative advertised url", () => {
     const p = buyerPayload();
     const r = backfillDiscovery(p, { resource: { url: "/api/swarm" }, bazaar: undefined });

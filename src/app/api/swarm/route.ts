@@ -22,6 +22,10 @@ import {
   type AgentcashIntel,
 } from "@/lib/agentcash-intel";
 import { sendAgentMail } from "@/lib/agentmail";
+import {
+  isSimulatedPaymentRequest,
+  simulatedPaymentsAllowed,
+} from "@/lib/simulated-payment";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -287,21 +291,24 @@ const paidPost = withX402(
 );
 
 export async function POST(req: NextRequest) {
-  try {
-    const clone = req.clone();
-    const body = await clone.json().catch(() => ({}));
-    const xPaymentHeader = req.headers.get("x-payment") || req.headers.get("payment-signature");
-
-    // Allow simulated fee gate (fee_paid: true) or simulated header bypass
-    if (
-      body?.fee_paid === true ||
-      body?.feePaid === true ||
-      (xPaymentHeader && xPaymentHeader.includes("simulated"))
-    ) {
-      return evaluate(rewriteRequestToPublicOrigin(req));
+  // Demo-only bypass (fee_paid / "simulated" header). Disabled on Vercel
+  // production so it cannot be used to skip payment; see simulated-payment.ts.
+  if (
+    simulatedPaymentsAllowed({
+      allow: process.env.X402_ALLOW_SIMULATED_PAYMENTS,
+      vercelEnv: process.env.VERCEL_ENV,
+      nodeEnv: process.env.NODE_ENV,
+    })
+  ) {
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      const paymentHeader = req.headers.get("x-payment") || req.headers.get("payment-signature");
+      if (isSimulatedPaymentRequest(body, paymentHeader)) {
+        return evaluate(rewriteRequestToPublicOrigin(req));
+      }
+    } catch {
+      // Fall back to paidPost
     }
-  } catch (e) {
-    // Fall back to paidPost
   }
 
   return paidPost(rewriteRequestToPublicOrigin(req));

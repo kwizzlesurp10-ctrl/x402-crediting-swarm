@@ -9,10 +9,9 @@ import {
   hasCdpCredentials,
 } from "@/lib/cdp-auth";
 import { resolveDefaultX402Network } from "@/lib/x402-env";
+import { resolveX402PayTo } from "@/lib/x402-pay-to";
 
-/** Same payTo used by x402-mcp on Base. Override with X402_PAY_TO_ADDRESS. */
-export const DEFAULT_PAY_TO =
-  "0x05e1720bB82F86B5bc7940a99FDC702E32256357" as const;
+export { DEFAULT_PAY_TO } from "@/lib/x402-pay-to";
 
 export const EVAL_PRICE = process.env.X402_EVAL_PRICE ?? "$0.05";
 
@@ -25,8 +24,7 @@ export const X402_NETWORK = resolveDefaultX402Network({
   nodeEnv: process.env.NODE_ENV,
 });
 
-export const X402_PAY_TO =
-  process.env.X402_PAY_TO_ADDRESS ?? DEFAULT_PAY_TO;
+export const X402_PAY_TO = resolveX402PayTo(process.env.X402_PAY_TO_ADDRESS);
 
 /** PayAI public facilitator — Base mainnet without CDP keys. */
 export const PAYAI_FACILITATOR_URL = "https://facilitator.payai.network";

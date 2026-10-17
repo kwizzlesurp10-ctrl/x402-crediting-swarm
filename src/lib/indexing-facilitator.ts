@@ -120,8 +120,18 @@ export class IndexingFacilitatorClient extends HTTPFacilitatorClient {
 
 /** Resource the route advertised in PAYMENT-REQUIRED (same rules as @x402/core). */
 export function advertisedResource(route: RouteConfig, requestUrl: string | undefined): ResourceInfoLike | null {
-  const url = route.resource || requestUrl;
+  let url = route.resource || requestUrl;
   if (!url) return null;
+  try {
+    const u = new URL(url);
+    u.search = "";
+    u.hash = "";
+    u.username = "";
+    u.password = "";
+    url = u.toString();
+  } catch {
+    return null;
+  }
   return {
     url,
     description: route.description,
@@ -132,8 +142,9 @@ export function advertisedResource(route: RouteConfig, requestUrl: string | unde
 }
 
 /**
- * Before settle, add `resource` and `extensions.bazaar` to the buyer's
- * PaymentPayload when they were omitted, copying what this route advertised.
+ * Before settle, make the buyer's PaymentPayload carry exactly the `resource`
+ * and `extensions.bazaar` this route advertised (set when omitted, replaced
+ * when foreign or altered) so CDP catalogs our listing with our metadata.
  */
 export function registerDiscoveryBackfill(server: x402ResourceServer, route: RouteConfig): void {
   server.onBeforeSettle(async (ctx) => {

@@ -64,38 +64,37 @@ describe("backfillDiscovery", () => {
     assert.notEqual(p.extensions.bazaar, bazaar, "must be a copy, not the shared route object");
   });
 
-  it("never overwrites buyer-supplied resource or bazaar", () => {
-    const mine = { url: "https://buyer.example/x" };
-    const p = buyerPayload({ resource: mine, extensions: { bazaar: { info: { mine: true } }, other: 1 } });
-    const r = backfillDiscovery(p, { resource, bazaar });
-    assert.deepEqual(r, { resource: false, bazaar: false });
-    assert.equal(p.resource, mine);
-    assert.deepEqual(p.extensions, { bazaar: { info: { mine: true } }, other: 1 });
-  });
-
-  it("replaces a relative resource url and keeps other extensions", () => {
-    const p = buyerPayload({ resource: { url: "/api/swarm" }, extensions: { other: 1 } });
-    backfillDiscovery(p, { resource, bazaar });
-    assert.equal(p.resource.url, URL_);
+  it("leaves a byte-equal echo alone", () => {
+    const p = buyerPayload({ resource: { ...resource }, extensions: { bazaar: structuredClone(bazaar), other: 1 } });
+    assert.deepEqual(backfillDiscovery(p, { resource, bazaar }), { resource: false, bazaar: false });
     assert.equal(p.extensions.other, 1);
-    assert.ok(p.extensions.bazaar);
   });
 
-  it("never attaches our bazaar declaration to a foreign buyer resource url", () => {
-    const p = buyerPayload({ resource: { url: "https://attacker.example/x" } });
-    const r = backfillDiscovery(p, { resource, bazaar });
-    assert.deepEqual(r, { resource: false, bazaar: false });
-    assert.equal(p.extensions, undefined);
+  it("replaces a foreign resource url and attaches our bazaar for our resource", () => {
+    const p = buyerPayload({ resource: { url: "https://attacker.example/x" }, extensions: { other: 1 } });
+    assert.deepEqual(backfillDiscovery(p, { resource, bazaar }), { resource: true, bazaar: true });
+    assert.deepEqual(p.resource, resource);
+    assert.deepEqual(p.extensions.bazaar, bazaar);
+    assert.equal(p.extensions.other, 1);
   });
 
-  it("attaches bazaar when the buyer echoed our own resource url (query ignored)", () => {
-    const p = buyerPayload({ resource: { url: `${URL_}?a=1` } });
-    assert.deepEqual(backfillDiscovery(p, { resource, bazaar }), { resource: false, bazaar: true });
+  it("replaces attacker-altered metadata on our own url (serviceName, query, userinfo, iconUrl)", () => {
+    for (const bad of [
+      { ...resource, serviceName: "Totally Legit" },
+      { ...resource, url: `${URL_}?ref=evil` },
+      { ...resource, url: URL_.replace("https://", "https://attacker@") },
+      { ...resource, iconUrl: "https://attacker.example/i.png" },
+    ]) {
+      const p = buyerPayload({ resource: bad, extensions: { bazaar: { info: { input: { evil: true } } } } });
+      assert.deepEqual(backfillDiscovery(p, { resource, bazaar }), { resource: true, bazaar: true });
+      assert.deepEqual(p.resource, resource);
+      assert.deepEqual(p.extensions.bazaar, bazaar);
+    }
   });
 
-  it("does not invent a relative advertised url", () => {
+  it("does nothing when our advertised url is not absolute", () => {
     const p = buyerPayload();
-    const r = backfillDiscovery(p, { resource: { url: "/api/swarm" }, bazaar: undefined });
+    const r = backfillDiscovery(p, { resource: { url: "/api/swarm" }, bazaar });
     assert.deepEqual(r, { resource: false, bazaar: false });
     assert.equal(p.resource, undefined);
   });
@@ -162,7 +161,7 @@ describe("registerDiscoveryBackfill + x402ResourceServer.settlePayment", () => {
     const server = new x402ResourceServer(client).register("eip155:8453", new ExactEvmScheme());
     registerDiscoveryBackfill(server, SWARM_ROUTE_CONFIG);
     const declared = SWARM_ROUTE_CONFIG.extensions as Record<string, unknown>;
-    const transportContext = { request: { adapter: { getUrl: () => URL_ } } };
+    const transportContext = { request: { adapter: { getUrl: () => `${URL_}?utm=1` } } };
     const res = await server.settlePayment(buyerPayload(), REQ, declared, transportContext);
     assert.equal(res.success, true);
     const sent = calls[0]!.body.paymentPayload;

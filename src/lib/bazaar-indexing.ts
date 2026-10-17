@@ -33,36 +33,32 @@ export type PayloadLike = {
   [k: string]: unknown;
 };
 
+/** true = the field was set or replaced with our canonical advertised value. */
 export type BackfillResult = { resource: boolean; bazaar: boolean };
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return Boolean(v) && typeof v === "object" && !Array.isArray(v);
 }
 
-function hasAbsoluteUrl(resource: unknown): boolean {
-  if (!isObj(resource) || typeof resource.url !== "string") return false;
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(resource.url);
-}
-
 const ABSOLUTE = /^https?:\/\//i;
 
-/** Same resource = same origin + path (query/fragment ignored). */
-export function sameResource(a: string, b: string): boolean {
-  try {
-    const x = new URL(a);
-    const y = new URL(b);
-    return x.protocol === y.protocol && x.host === y.host && x.pathname.replace(/\/+$/, "") === y.pathname.replace(/\/+$/, "");
-  } catch {
-    return false;
-  }
+function stableJson(v: unknown): string {
+  return JSON.stringify(v, (_k, x) =>
+    isObj(x) ? Object.fromEntries(Object.entries(x).sort(([p], [q]) => (p < q ? -1 : p > q ? 1 : 0))) : x,
+  );
 }
 
 /**
- * Mutates `payload` in place: sets `resource` when the buyer left it out (or
- * sent it without an absolute URL) and `extensions.bazaar` when missing.
- * Buyer-supplied values are never replaced, and our bazaar declaration is only
- * attached when the payload's resource is this route's own advertised URL, so
- * a buyer cannot get our discovery metadata cataloged under a foreign URL.
+ * Mutates `payload` in place so the settle request carries exactly the
+ * `resource` and `extensions.bazaar` this route advertised in its own
+ * PAYMENT-REQUIRED challenge.
+ *
+ * We settle with our own CDP credentials, so we are the authority for what
+ * gets cataloged: a missing, relative, foreign, or altered buyer copy (other
+ * URL, query/userinfo, serviceName, description, tags, iconUrl, or a different
+ * bazaar block) is replaced by the canonical advertised value. A byte-equal
+ * echo is left alone. Other extensions are kept. Neither field is covered by
+ * the buyer's EIP-3009 signature, so this cannot change what is paid.
  */
 export function backfillDiscovery(
   payload: PayloadLike,
@@ -71,19 +67,18 @@ export function backfillDiscovery(
   const out: BackfillResult = { resource: false, bazaar: false };
   const res = advertised.resource;
   if (!res || !ABSOLUTE.test(res.url)) return out;
-  if (!hasAbsoluteUrl(payload.resource)) {
-    const clean: ResourceInfoLike = { url: res.url };
-    if (res.description) clean.description = res.description;
-    if (res.mimeType) clean.mimeType = res.mimeType;
-    if (res.serviceName) clean.serviceName = res.serviceName;
-    if (res.tags?.length) clean.tags = [...res.tags];
-    payload.resource = clean;
+  const canonical: ResourceInfoLike = { url: res.url };
+  if (res.description) canonical.description = res.description;
+  if (res.mimeType) canonical.mimeType = res.mimeType;
+  if (res.serviceName) canonical.serviceName = res.serviceName;
+  if (res.tags?.length) canonical.tags = [...res.tags];
+  if (stableJson(payload.resource) !== stableJson(canonical)) {
+    payload.resource = canonical;
     out.resource = true;
   }
-  const payloadUrl = (payload.resource as { url: string }).url;
-  if (!sameResource(payloadUrl, res.url)) return out;
+  if (advertised.bazaar === undefined || advertised.bazaar === null) return out;
   const exts = isObj(payload.extensions) ? payload.extensions : {};
-  if (advertised.bazaar !== undefined && advertised.bazaar !== null && !isObj(exts[BAZAAR_KEY])) {
+  if (stableJson(exts[BAZAAR_KEY]) !== stableJson(advertised.bazaar)) {
     payload.extensions = { ...exts, [BAZAAR_KEY]: structuredClone(advertised.bazaar) };
     out.bazaar = true;
   }

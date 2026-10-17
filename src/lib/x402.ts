@@ -1,5 +1,5 @@
 import "server-only";
-import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
+import { x402ResourceServer } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import {
   CDP_FACILITATOR_URL,
@@ -13,6 +13,10 @@ import {
   X402_NETWORK,
   X402_PAY_TO,
 } from "@/lib/swarm-route-config";
+import {
+  IndexingFacilitatorClient,
+  registerDiscoveryBackfill,
+} from "@/lib/indexing-facilitator";
 
 export {
   DEFAULT_PAY_TO,
@@ -47,7 +51,9 @@ let server: x402ResourceServer | null = null;
 
 export function getResourceServer(): x402ResourceServer {
   if (!server) {
-    const facilitator = new HTTPFacilitatorClient({
+    // Captures the CDP Bazaar indexing status on every settle (logged and
+    // returned in PAYMENT-RESPONSE extensions.bazaar).
+    const facilitator = new IndexingFacilitatorClient({
       url: X402_FACILITATOR_URL,
       ...(CDP && process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET
         ? {
@@ -58,11 +64,14 @@ export function getResourceServer(): x402ResourceServer {
             ),
           }
         : {}),
-    });
+    }, { serviceName: "x402-crediting-swarm" });
     server = new x402ResourceServer(facilitator).register(
       X402_NETWORK,
       new ExactEvmScheme(),
     );
+    // Buyers that omit paymentPayload.resource / extensions.bazaar settle fine
+    // but are never cataloged; backfill from our own advertised challenge.
+    registerDiscoveryBackfill(server, SWARM_ROUTE_CONFIG);
   }
   return server;
 }

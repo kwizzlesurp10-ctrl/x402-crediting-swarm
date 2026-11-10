@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { DEFAULT_PAY_TO } from "./x402-pay-to.ts";
 import { SWARM_ROUTE_CONFIG } from "./swarm-route-config.ts";
 
 function getBazaarExtension(): {
@@ -44,5 +45,12 @@ describe("SWARM_ROUTE_CONFIG bazaar discovery", () => {
       (SWARM_ROUTE_CONFIG.description?.length ?? 0) >= 120,
       "description should document price and errors for Bazaar curation",
     );
+  });
+
+  it("advertises Keith's payTo on HTTP 402 route config", () => {
+    const accepts = SWARM_ROUTE_CONFIG.accepts;
+    assert.ok(accepts && typeof accepts === "object" && !Array.isArray(accepts));
+    assert.equal(accepts.payTo, DEFAULT_PAY_TO);
+    assert.equal(accepts.scheme, "exact");
   });
 });

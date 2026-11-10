@@ -2,11 +2,26 @@
 export const DEFAULT_PAY_TO =
   "0x0d25A44f74868eCE53B305C97139CF4B62963410" as const;
 
+/** Lost-key seller address — must never receive settlements. */
+export const RETIRED_X402_PAY_TO =
+  "0xAB745e5F576667037696e78ba7dA28E193E4423D" as const;
+
+export function isRetiredX402PayTo(address: string): boolean {
+  return address.trim().toLowerCase() === RETIRED_X402_PAY_TO.toLowerCase();
+}
+
 export function resolveX402PayTo(
   payToAddressFromEnv?: string,
 ): typeof DEFAULT_PAY_TO | string {
   const trimmed = payToAddressFromEnv?.trim();
-  if (trimmed) return trimmed;
+  if (trimmed) {
+    if (isRetiredX402PayTo(trimmed)) {
+      throw new Error(
+        `X402_PAY_TO_ADDRESS is the retired payee ${RETIRED_X402_PAY_TO}; use ${DEFAULT_PAY_TO}.`,
+      );
+    }
+    return trimmed;
+  }
   return DEFAULT_PAY_TO;
 }
 

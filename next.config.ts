@@ -4,6 +4,7 @@ import path from "node:path";
 const isContainer = Boolean(process.env.RENDER || process.env.RAILWAY_STATIC_URL || process.env.DOCKER);
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   ...(isContainer ? { output: "standalone" } : {}),
   turbopack: {
     root: path.resolve(__dirname),
@@ -18,6 +19,8 @@ const nextConfig: NextConfig = {
     ];
     return [
       { source: "/api/swarm", headers: cors },
+      { source: "/mcp", headers: cors },
+      { source: "/mcp/", headers: cors },
       { source: "/openapi.json", headers: cors },
       { source: "/llms.txt", headers: cors },
       { source: "/.well-known/x402", headers: cors },

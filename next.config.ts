@@ -20,8 +20,15 @@ const nextConfig: NextConfig = {
       { source: "/api/swarm", headers: cors },
       { source: "/openapi.json", headers: cors },
       { source: "/llms.txt", headers: cors },
-      { source: "/.well-known/x402", headers: cors },
-      { source: "/.well-known/funding.json", headers: cors },
+      { source: "/.well-known/:path*", headers: cors },
+      { source: "/mcp", headers: cors },
+      { source: "/a2a", headers: cors },
+    ];
+  },
+  async rewrites() {
+    return [
+      { source: "/mcp", destination: "/.well-known/mcp.json" },
+      { source: "/.well-known/mcp", destination: "/.well-known/mcp.json" },
     ];
   },
 };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { A2A_X402_EXTENSION_URI, handleA2a } from "@/lib/a2a";
+import { buildAgentCard } from "@/lib/agent-card";
 import { publicOrigin } from "@/lib/public-origin";
 
 export const dynamic = "force-dynamic";
@@ -30,13 +31,5 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const origin = publicOrigin(req);
-  return NextResponse.json(
-    {
-      protocol: "A2A JSON-RPC 0.3",
-      methods: ["message/send", "tasks/get"],
-      agentCard: `${origin}/.well-known/agent-card.json`,
-      hint: 'POST {"jsonrpc":"2.0","id":1,"method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"data","data":{"payload":{"endpoint_url":"https://api.example/v1/resource"}}}],"metadata":{"skillId":"evaluate-x402-payload"}}}}',
-    },
-    { headers: CORS },
-  );
+  return NextResponse.json(buildAgentCard(origin), { headers: CORS });
 }

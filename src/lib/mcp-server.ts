@@ -7,6 +7,14 @@ import {
 
 export const MCP_PROTOCOL_VERSION = "2025-03-26";
 
+export type McpToolAnnotations = {
+  title: string;
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  openWorldHint: boolean;
+};
+
 export type McpToolDef = {
   name: string;
   description: string;
@@ -14,7 +22,14 @@ export type McpToolDef = {
     type: "object";
     properties: Record<string, unknown>;
     required?: string[];
+    additionalProperties: false;
   };
+  outputSchema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  annotations: McpToolAnnotations;
 };
 
 export const MCP_TOOLS: McpToolDef[] = [
@@ -36,6 +51,49 @@ export const MCP_TOOLS: McpToolDef[] = [
         },
       },
       required: ["payload"],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Execution status (success or error)" },
+        caller_id: { type: "string", description: "Caller identifier echoed by swarm" },
+        final_creditability_score: {
+          type: "number",
+          description: "Consensus creditability score from 0 to 1000",
+        },
+        final_recommendation: {
+          type: "string",
+          description: "Definitive GO or NO-GO micropayment recommendation",
+        },
+        trust_level: { type: "string", description: "Derived trust classification tier" },
+        aggregated_flags: {
+          type: "array",
+          description: "Deduplicated risk and anomaly flags across consensus nodes",
+        },
+        node_reports: {
+          type: "array",
+          description: "Per-node credit scores, flags, and rationale (Alpha, Beta, Gamma)",
+        },
+        agentcash_intel: {
+          type: "object",
+          description: "Live AgentCash discovery and trust intelligence context",
+        },
+      },
+      required: [
+        "status",
+        "final_creditability_score",
+        "final_recommendation",
+        "trust_level",
+        "node_reports",
+      ],
+    },
+    annotations: {
+      title: "Evaluate x402 Creditworthiness ($0.05)",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
     },
   },
   {
@@ -51,9 +109,32 @@ export const MCP_TOOLS: McpToolDef[] = [
         priority: {
           type: "string",
           enum: ["low", "normal", "high", "urgent"],
+          description: "Message delivery priority tier (low, normal, high, urgent)",
         },
       },
       required: ["to", "subject", "body"],
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Unique dispatched AgentMail message ID" },
+        thread_id: { type: "string", description: "Conversation thread identifier" },
+        from: { type: "string", description: "Sender AgentMail address" },
+        to: { type: "string", description: "Recipient agent ID or address" },
+        subject: { type: "string", description: "Message subject line" },
+        body: { type: "string", description: "Message body text" },
+        timestamp: { type: "string", description: "ISO-8601 dispatch timestamp" },
+        priority: { type: "string", description: "Assigned delivery priority tier" },
+      },
+      required: ["id", "thread_id", "from", "to", "subject", "timestamp"],
+    },
+    annotations: {
+      title: "Send AgentMail Threat Alert",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
     },
   },
   {
@@ -64,6 +145,28 @@ export const MCP_TOOLS: McpToolDef[] = [
       properties: {
         limit: { type: "number", description: "Maximum messages to return" },
       },
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        inbox: {
+          type: "array",
+          description: "Recent AgentMail messages and automated threat alerts",
+        },
+        count: {
+          type: "number",
+          description: "Number of returned inbox messages",
+        },
+      },
+      required: ["inbox", "count"],
+    },
+    annotations: {
+      title: "Read AgentMail Inbox",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -73,6 +176,30 @@ export const MCP_TOOLS: McpToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {},
+      additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Current swarm operational status" },
+        version: { type: "string", description: "Service semver version" },
+        nodes: {
+          type: "array",
+          description: "Active consensus node identifiers",
+        },
+        x402_config: {
+          type: "object",
+          description: "Live x402 price, network, payee address, and facilitator",
+        },
+      },
+      required: ["status", "version", "nodes", "x402_config"],
+    },
+    annotations: {
+      title: "Swarm Health & x402 Config",
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
     },
   },
 ];
@@ -91,7 +218,7 @@ export function buildMcpServerCard(origin: string) {
     schema_version: "v1",
     name: "x402-crediting-swarm",
     title: "x402 Crediting Swarm",
-    version: "2.0.0",
+    version: "2.0.1",
     description:
       "3-Node consensus swarm for analyzing x402 micropayment legitimacy and sending AgentMail threat alerts.",
     protocolVersion: MCP_PROTOCOL_VERSION,
@@ -203,7 +330,7 @@ export async function handleMcpJsonRpc(
         result: {
           protocolVersion: MCP_PROTOCOL_VERSION,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "x402-crediting-swarm", version: "2.0.0" },
+          serverInfo: { name: "x402-crediting-swarm", version: "2.0.1" },
         },
       },
     };
@@ -239,7 +366,7 @@ export async function handleMcpJsonRpc(
     if (toolName === "swarm_health") {
       const data = {
         status: "online",
-        version: "2.0.0",
+        version: "2.0.1",
         nodes: ["x402_node_alpha", "x402_node_beta", "x402_node_gamma"],
         x402_config: {
           price: EVAL_PRICE,

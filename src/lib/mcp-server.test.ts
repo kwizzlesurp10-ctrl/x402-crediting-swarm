@@ -4,7 +4,7 @@ import { buildMcpServerCard, handleMcpJsonRpc } from "./mcp-server.ts";
 
 const noopEval = async () => ({ status: 200, body: { ok: true } });
 
-test("buildMcpServerCard exposes streamable-http card with 4 inputSchema tools", () => {
+test("buildMcpServerCard exposes complete schemas and annotations for 4 tools", () => {
   const card = buildMcpServerCard("https://x402-crediting-swarm.vercel.app");
   assert.equal(card.transport, "streamable-http");
   assert.equal(card.endpoint, "https://x402-crediting-swarm.vercel.app/mcp");
@@ -16,6 +16,30 @@ test("buildMcpServerCard exposes streamable-http card with 4 inputSchema tools",
   for (const tool of card.tools) {
     assert.equal(typeof tool.name, "string");
     assert.equal(tool.inputSchema.type, "object");
+    assert.equal(tool.inputSchema.additionalProperties, false);
+    for (const [propName, propVal] of Object.entries(tool.inputSchema.properties)) {
+      const p = propVal as { description?: string };
+      assert.equal(
+        typeof p.description,
+        "string",
+        `input property ${tool.name}.${propName} missing description`,
+      );
+    }
+    assert.equal(tool.outputSchema.type, "object");
+    for (const [propName, propVal] of Object.entries(tool.outputSchema.properties)) {
+      const p = propVal as { type?: string; description?: string };
+      assert.equal(typeof p.type, "string", `output ${tool.name}.${propName} missing type`);
+      assert.equal(
+        typeof p.description,
+        "string",
+        `output ${tool.name}.${propName} missing description`,
+      );
+    }
+    assert.equal(typeof tool.annotations.title, "string");
+    assert.equal(typeof tool.annotations.readOnlyHint, "boolean");
+    assert.equal(typeof tool.annotations.destructiveHint, "boolean");
+    assert.equal(typeof tool.annotations.idempotentHint, "boolean");
+    assert.equal(typeof tool.annotations.openWorldHint, "boolean");
   }
 });
 

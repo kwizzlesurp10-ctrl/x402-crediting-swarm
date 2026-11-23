@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: x402-crediting-swarm
+    runtime: docker
+    repo: https://github.com/kwizzlesurp10-ctrl/x402-crediting-swarm
+    branch: master
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /api/mailrail?action=health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: X402_NETWORK
+        value: eip155:8453
+      - key: X402_PAY_TO_ADDRESS
+        value: "0x0d25A44f74868eCE53B305C97139CF4B62963410"

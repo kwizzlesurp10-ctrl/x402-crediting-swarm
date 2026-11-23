@@ -23,8 +23,8 @@ const inMemoryInbox: AgentMailMessage[] = [
   {
     id: "mail_init_001",
     thread_id: "thread_system_startup",
-    from: "swarm_postmaster@x402-crediting-swarm.onrender.com",
-    to: "all-nodes@x402-crediting-swarm.onrender.com",
+    from: "swarm_postmaster@x402-crediting-swarm.vercel.app",
+    to: "all-nodes@x402-crediting-swarm.vercel.app",
     subject: "Swarm Node Initialization & x402 v2 Protocol Ready",
     body: "x402 Crediting Swarm is active across 3 nodes (Alpha, Beta, Gamma). Ready to process micropayment threat assessments and dispatch AgentMail alerts.",
     timestamp: new Date(Date.now() - 3600000).toISOString(),
@@ -45,7 +45,7 @@ export function sendAgentMail(params: {
   const message: AgentMailMessage = {
     id: `mail_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     thread_id: params.thread_id || `thread_${Date.now()}`,
-    from: params.from || "swarm_postmaster@x402-crediting-swarm.onrender.com",
+    from: params.from || "swarm_postmaster@x402-crediting-swarm.vercel.app",
     to: params.to,
     subject: params.subject,
     body: params.body,

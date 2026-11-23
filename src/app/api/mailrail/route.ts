@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       status: "healthy",
       service: "MailRail AgentMail Rail",
       provider: "in-memory-ledger",
-      sender: "swarm_postmaster@x402-crediting-swarm.onrender.com"
+      sender: "swarm_postmaster@x402-crediting-swarm.vercel.app"
     });
   }
 

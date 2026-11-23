@@ -253,7 +253,7 @@ async function evaluate(req: NextRequest): Promise<NextResponse> {
     if (averageScore < 500) {
       const endpoint = (payload as any)?.endpoint_url || "unknown endpoint";
       sendAgentMail({
-        from: "swarm_postmaster@x402-crediting-swarm.onrender.com",
+        from: "swarm_postmaster@x402-crediting-swarm.vercel.app",
         to: callerId || "all-agents@x402-mcp",
         subject: `🚨 CRITICAL THREAT ALERT: High Fraud Risk (Score ${averageScore}/1000)`,
         body: `x402 Crediting Swarm evaluation for vendor endpoint '${endpoint}' returned NO-GO due to risk flags: ${allFlags.join('; ') || 'High risk profile'}.`,

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kwizzlesurp10-ctrl/x402-crediting-swarm",
+  "title": "x402 Crediting Swarm",
+  "description": "3-node x402 consensus credit scoring swarm and AgentMail threat alerts on Base USDC.",
+  "version": "2.0.1",
+  "websiteUrl": "https://x402-crediting-swarm.vercel.app",
+  "repository": {
+    "url": "https://github.com/kwizzlesurp10-ctrl/x402-crediting-swarm",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://x402-crediting-swarm.vercel.app/mcp"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { A2A_X402_EXTENSION_URI, buildAgentCard, priceToAtomic } from "./agent-card.ts";
+import { DEFAULT_PAY_TO } from "./x402-pay-to.ts";
 
 const ORIGIN = "https://x402-crediting-swarm.vercel.app";
 
@@ -35,6 +36,7 @@ describe("buildAgentCard", () => {
     assert.equal(skill.x402.scheme, "exact");
     assert.equal(skill.x402.amount, priceToAtomic(skill.x402.price));
     assert.equal(skill.x402.a2a.url, `${ORIGIN}/a2a`);
+    assert.equal(skill.x402.payTo, DEFAULT_PAY_TO);
   });
 
   it("converts prices to USDC atomic units", () => {

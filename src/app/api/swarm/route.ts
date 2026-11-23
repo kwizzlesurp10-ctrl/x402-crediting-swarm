@@ -26,6 +26,7 @@ import {
   isSimulatedPaymentRequest,
   simulatedPaymentsAllowed,
 } from "@/lib/simulated-payment";
+import { populatePaymentRequiredBody } from "@/lib/x402-response";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -311,5 +312,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return paidPost(rewriteRequestToPublicOrigin(req));
+  return populatePaymentRequiredBody(await paidPost(rewriteRequestToPublicOrigin(req)));
 }
